@@ -4,31 +4,41 @@ import { Redis } from '@upstash/redis';
 import { Ratelimit } from '@upstash/ratelimit';
 import { ContactSchema } from '@/features/contact/types';
 
-// 1. Upstash Redis Yapılandırması (Hız Sınırı Kontrolü İçin)
+// 1. Upstash Redis Yapılandırması
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_REST_URL!,
   token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
 
-// 2. Rate Limit Tanımlama: IP başına 1 saatte en fazla 3 başarılı istek
+// 2. Rate Limit Tanımlama (Test için 1 saatte 3 yerine 2 dakikada 2 yapabilirsin)
 const ratelimit = new Ratelimit({
   redis: redis,
   limiter: Ratelimit.slidingWindow(3, "1 h"),
 });
 
 export async function POST(request: Request) {
+  // Hata Ayıklama Logları - Vercel Logs panelinde görünecek
+  console.log("--- API İSTEĞİ BAŞLADI ---");
+  console.log("Redis URL Kontrolü:", process.env.UPSTASH_REDIS_REST_URL ? "OK" : "EKSİK!");
+  console.log("Redis Token Kontrolü:", process.env.UPSTASH_REDIS_REST_TOKEN ? "OK" : "EKSİK!");
+
   try {
     // A. IP Bazlı Hız Sınırı Kontrolü
-    const ip = request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+    // Vercel üzerinde daha hassas IP tespiti için x-real-ip eklendi
+    const ip = request.headers.get("x-real-ip") ?? request.headers.get("x-forwarded-for") ?? "127.0.0.1";
+    console.log("İstek Gelen IP:", ip);
+
     const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+    console.log(`Rate Limit Sonucu: ${success ? "GEÇTİ" : "TAKILDI"} | Kalan Hak: ${remaining}`);
 
     if (!success) {
+      console.warn("DİKKAT: Rate Limit aşıldı, mail gönderimi engelleniyor.");
       return NextResponse.json(
         { 
           error: "Çok fazla istek gönderdiniz. Güvenlik nedeniyle lütfen bir saat sonra tekrar deneyiniz." 
         },
         { 
-          status: 429, // Too Many Requests
+          status: 429, 
           headers: {
             'X-RateLimit-Limit': limit.toString(),
             'X-RateLimit-Remaining': remaining.toString(),
@@ -43,6 +53,7 @@ export async function POST(request: Request) {
     const result = ContactSchema.safeParse(body);
     
     if (!result.success) {
+      console.error("Zod Doğrulama Hatası:", result.error);
       return NextResponse.json({ error: "Girdiğiniz veriler doğrulanamadı." }, { status: 400 });
     }
 
@@ -60,8 +71,8 @@ export async function POST(request: Request) {
     // D. Mail İçeriği ve Gönderimi
     const mailOptions = {
       from: process.env.EMAIL_USER,
-      to: process.env.EMAIL_USER, // Form mesajı size gelecek
-      replyTo: email,           // Yanıtla dendiğinde kullanıcıya gitsin
+      to: process.env.EMAIL_USER,
+      replyTo: email,
       subject: `İletişim Formu: ${name}`,
       html: `
         <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
@@ -76,11 +87,12 @@ export async function POST(request: Request) {
     };
 
     await transporter.sendMail(mailOptions);
+    console.log("Mail başarıyla gönderildi.");
 
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error) {
-    console.error("İşlem hatası:", error);
+    console.error("KRİTİK HATA:", error);
     return NextResponse.json({ error: "Sunucu tarafında bir hata oluştu." }, { status: 500 });
   }
 }
