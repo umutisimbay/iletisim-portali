@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ContactSchema, ContactFormData } from "../types";
 
 export const ContactForm: React.FC = () => {
-  // Başarı mesajı durumunu yönetmek için state
   const [showSuccess, setShowSuccess] = useState(false);
 
   const { 
@@ -20,7 +19,6 @@ export const ContactForm: React.FC = () => {
 
   const onSubmit = async (data: ContactFormData) => {
     try {
-      // API'ye istek atıyoruz
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
@@ -29,50 +27,54 @@ export const ContactForm: React.FC = () => {
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        throw new Error('Bir hata oluştu');
+      const result = await response.json();
+
+      // 1. Rate Limit (429) Hatası Kontrolü
+      if (response.status === 429) {
+        alert(result.error || "Çok fazla mesaj gönderdiniz. Lütfen bir saat sonra tekrar deneyiniz.");
+        return;
       }
 
-      console.log("Sunucu yanıt verdi: Başarılı");
-      
-      // Başarı mesajını tetikle
+      // 2. Diğer Hataların Kontrolü
+      if (!response.ok) {
+        throw new Error(result.error || 'Bir hata oluştu');
+      }
+
+      // Başarılı durum
       setShowSuccess(true);
       reset();
 
-      // 3 saniye sonra mesajı gizle
       setTimeout(() => {
         setShowSuccess(false);
       }, 3000);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
-      alert("Mesaj gönderilirken bir hata oluştu.");
+      alert(error.message || "Mesaj gönderilirken bir hata oluştu.");
     }
   };
 
   return (
     <div className="w-full max-w-lg mx-auto relative">
       
-      {/* 🌟 Başarı Bildirimi (Konum: Sağ Alt Köşe) */}
+      {/* Başarı Bildirimi */}
       {showSuccess && (
         <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-10 fade-in duration-500">
-          <div className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl shadow-emerald-200 dark:shadow-none flex items-center gap-3 border border-emerald-400">
+          <div className="bg-emerald-500 text-white px-6 py-3 rounded-2xl shadow-2xl shadow-emerald-200 flex items-center gap-3 border border-emerald-400">
             <div className="bg-white/20 rounded-full p-1">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <span className="font-bold text-sm">Mesajınız başarıyla iletildi!</span>
+            <span className="font-bold text-sm">Mesajınız iletildi!</span>
           </div>
         </div>
       )}
 
-      {/* Form Kartı */}
       <div className={`transition-all duration-500 ${showSuccess ? 'opacity-50 scale-[0.98] pointer-events-none' : 'opacity-100'}`}>
         <div className="bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl p-8 rounded-3xl border border-zinc-200 dark:border-zinc-800 shadow-[0_20px_50px_rgba(0,0,0,0.1)]">
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             
-            {/* İsim Alanı */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-zinc-600 dark:text-zinc-400 ml-1">Ad Soyad</label>
               <input 
@@ -84,7 +86,6 @@ export const ContactForm: React.FC = () => {
               {errors.name && <p className="text-xs text-red-500 font-medium ml-1">İsim en az 2 karakter olmalıdır</p>}
             </div>
 
-            {/* E-posta Alanı */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-zinc-600 dark:text-zinc-400 ml-1">E-posta Adresi</label>
               <input 
@@ -97,7 +98,6 @@ export const ContactForm: React.FC = () => {
               {errors.email && <p className="text-xs text-red-500 font-medium ml-1">Geçerli bir e-posta adresi giriniz</p>}
             </div>
 
-            {/* Mesaj Alanı */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-zinc-600 dark:text-zinc-400 ml-1">Mesajınız</label>
               <textarea 
@@ -110,7 +110,6 @@ export const ContactForm: React.FC = () => {
               {errors.message && <p className="text-xs text-red-500 font-medium ml-1">Mesaj en az 10 karakter olmalıdır</p>}
             </div>
 
-            {/* Gönder Butonu */}
             <button
               type="submit"
               disabled={isSubmitting || showSuccess}
