@@ -3,7 +3,7 @@ import { ContactForm } from "../features/contact/components/ContactForm";
 export default function Home() {
   return (
     /* Ana Konteynır */
-    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 antialiased bg-gradient-to-br from-zinc-50 via-white to-indigo-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950">
+    <div className="relative min-h-screen w-full flex flex-col items-center justify-center p-6 antialiased bg-linear-to-br from-zinc-50 via-white to-indigo-50 dark:from-zinc-950 dark:via-zinc-900 dark:to-indigo-950">
       
       {/* Arka Plan Dekorasyonu */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden -z-10">
