@@ -78,13 +78,3 @@ Projenin temel dosya ve klasör yapısı aşağıdadır. Bu yapı, **Next.js App
 └── 📄 tsconfig.json         # TypeScript ayarları
 
 ---
-
-## 🚀 Kurulum ve Çalıştırma
-
-Projeyi yerel ortamınızda çalıştırmak için aşağıdaki adımları izleyin.
-
-### 1. Projeyi Klonlayın
-
-```bash
-git clone [https://github.com/kullaniciadi/projeniz.git](https://github.com/kullaniciadi/projeniz.git)
-cd projeniz
